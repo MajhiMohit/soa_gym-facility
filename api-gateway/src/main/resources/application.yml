@@ -1,0 +1,85 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      routes:
+        # Auth Service routes - publicly accessible (no JWT)
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+
+        # Member Service routes - JWT protected (GlobalFilter applies automatically)
+        - id: member-service
+          uri: lb://member-service
+          predicates:
+            - Path=/api/members/**
+
+        # Subscription Service routes - JWT protected
+        - id: subscription-service
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/subscriptions/**
+
+        # Attendance Service routes - JWT protected
+        - id: attendance-service
+          uri: lb://attendance-service
+          predicates:
+            - Path=/api/attendance/**
+
+        # Swagger UI routes for each downstream service (public access)
+        - id: member-service-swagger
+          uri: lb://member-service
+          predicates:
+            - Path=/member-service/v3/api-docs/**
+          filters:
+            - RewritePath=/member-service/(?<segment>.*), /$\{segment}
+
+        - id: subscription-service-swagger
+          uri: lb://subscription-service
+          predicates:
+            - Path=/subscription-service/v3/api-docs/**
+          filters:
+            - RewritePath=/subscription-service/(?<segment>.*), /$\{segment}
+
+        - id: attendance-service-swagger
+          uri: lb://attendance-service
+          predicates:
+            - Path=/attendance-service/v3/api-docs/**
+          filters:
+            - RewritePath=/attendance-service/(?<segment>.*), /$\{segment}
+
+        - id: auth-service-swagger
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth-service/v3/api-docs/**
+          filters:
+            - RewritePath=/auth-service/(?<segment>.*), /$\{segment}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: pulseFitSuperSecretKeyForJWTHS256AuthenticationThatIsLongEnough2024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
